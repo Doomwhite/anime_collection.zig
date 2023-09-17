@@ -1,0 +1,10 @@
+.{
+    .name = "anime_collection.zig",
+    .version = "0.0.1",
+    .dependencies = .{
+			.sqlite = .{
+					.url = "https://github.com/vrischmann/zig-sqlite/archive/f101ae075124f77a44444d368c869a5b3d3d4a6f.tar.gz",
+					.hash = "122073e11072fef8290c2dcaff55f76891f27dcfb7d5de0412f482668c9f23ba88c9"
+			},
+   },
+}
