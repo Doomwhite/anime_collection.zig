@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) void {
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
-    const mode = b.standardOptimizeOption(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
         .name = "anime_collection.zig",
@@ -22,21 +22,23 @@ pub fn build(b: *std.Build) void {
         // complicated build scripts, this could be a generated file.
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
-        .optimize = mode,
+        .optimize = optimize,
     });
-    raylib.addTo(b, exe, target, mode);
+
+    const settingsModule = b.addModule("settings", .{ .source_file = .{ .path = "./src/settings.zig" } });
+    exe.addModule("settings", settingsModule);
+
+    raylib.addTo(b, exe, target, optimize);
 
     const sqlite = b.dependency("sqlite", .{
         .target = target,
-        .optimize = mode,
+        .optimize = optimize,
     });
 
     exe.addModule("sqlite", sqlite.module("sqlite"));
 
-    // Sqlite
-    // exe.linkLibC();
-    // exe.linkSystemLibrary("sqlite3");
-    // exe.addPackage(.{ .name = "sqlite", .path = "third_party/zig-sqlite/sqlite.zig" });
+    // links the bundled sqlite3, so leave this out if you link the system one
+    exe.linkLibrary(sqlite.artifact("sqlite"));
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -71,7 +73,7 @@ pub fn build(b: *std.Build) void {
     const unit_tests = b.addTest(.{
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
-        .optimize = mode,
+        .optimize = optimize,
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
