@@ -2,6 +2,7 @@ const std = @import("std");
 const sqlite = @import("sqlite");
 const raylib = @import("raylib");
 const Image = raylib.Image;
+const Allocator = std.mem.Allocator;
 
 // const settings = @import("settings");
 // const ColorTheme = settings.ColorTheme;
@@ -81,7 +82,12 @@ const menu_width = 200; // Width of the sidebar menu
 pub var is_dark_mode: bool = true;
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) @panic("found memory leaks");
+    const allocator: Allocator = gpa.allocator();
+
     var db = try sqlite.Db.init(.{
+        // .mode = sqlite.Db.Mode{ .File = "/database.db" },
         .mode = sqlite.Db.Mode{ .File = "/database.db" },
         .open_flags = .{
             .write = true,
@@ -89,7 +95,14 @@ pub fn main() !void {
         },
         .threading_mode = .MultiThread,
     });
-    try executeSQLiteScripts(&db);
+    defer db.deinit();
+    // defer std.log.info("gpa.deinit(): {any}", .{gpa.deinit()});
+    // defer std.log.info("gpa.deinit(): {any}", .{gpa.detectLeaks()});
+    // defer if (gpa.deinit() == .leak) {
+    //     std.debug.panic("leaks detected", .{});
+    // };
+
+    try executeSQLiteScripts(&db, allocator);
 
     // defer raylib.CloseWindow();
     //
@@ -146,32 +159,125 @@ fn renderSidebarMenu(selected_index: *usize) void {
     }
 }
 
-fn executeSQLiteScripts(db: *sqlite.Db) !void {
+fn executeSQLiteScripts(db: *sqlite.Db, gpa_allocator: Allocator) !void {
+    var arena_allocator = std.heap.ArenaAllocator.init(gpa_allocator);
+    defer arena_allocator.deinit();
+    var allocator = arena_allocator.allocator();
+
     // SQL command to create the "Anime" table with columns
-    const createTableScript =
-        \\CREATE TABLE IF NOT EXISTS Anime (
-        \\id INTEGER PRIMARY KEY AUTOINCREMENT,
-        \\title TEXT NOT NULL,
-        \\genre TEXT,
-        \\episode_count INTEGER
-        \\)
-    ;
+    // const createTableScript =
+    //     \\CREATE TABLE IF NOT EXISTS Anime (
+    //     \\id INTEGER PRIMARY KEY AUTOINCREMENT,
+    //     \\title TEXT NOT NULL,
+    //     \\genre TEXT,
+    //     \\episode_count INTEGER
+    //     \\)
+    // ;
+    //
+    // // Execute the SQL command to create the table
+    // try db.exec(createTableScript, .{}, .{});
+
+    // const insertScript =
+    //     \\INSERT INTO Anime (title
+    //     \\,genre
+    //     \\)
+    //     \\VALUES(
+    //     \\,$title{[]const u8}
+    //     \\,$genre{[]const u8}
+    //     \\)
+    // ;
 
     // Execute the SQL command to create the table
-    try db.exec(createTableScript, .{}, .{});
+    // try db.exec(insertScript, .{}, .{ @as([]const u8, "Kindaichi"), @as([]const u8, "Mystery") });
+    //
+    // const selectScript =
+    //     \\ SELECT
+    //     \\ id
+    //     \\ ,title
+    //     \\ FROM
+    //     \\ Anime
+    // ;
 
-    const insertScript =
-        \\INSERT INTO Anime (title
-        \\,genre
-        \\)
-        \\VALUES(
-        \\,$title{[]const u8}
-        \\,$genre{[]const u8}
-        \\)
+    // var stmt = try db.prepare(selectScript);
+    // defer stmt.deinit();
+    //
+    // const row = try stmt.one(
+    //     struct {
+    //         id: usize,
+    //         title: [128:0]u8,
+    //     },
+    //     .{},
+    //     .{},
+    // );
+    //
+    // if (row) |row_value| {
+    //     std.log.info("row1: {s}", .{row_value.title});
+    // }
+
+    const query =
+        \\SELECT 
+        \\id 
+        \\,title 
+        \\,genre 
+        \\FROM 
+        \\Anime
     ;
 
-    // Execute the SQL command to create the table
-    try db.exec(insertScript, .{}, .{ @as([]const u8, "Kindaichi"), @as([]const u8, "Mystery") });
+    var stmt = try db.prepare(query);
+    defer stmt.deinit();
+
+    // const row2 = try db.oneAlloc(
+    //     struct {
+    //       id: usize,
+    //       title: []const u8,
+    //       genre: []const u8,
+    //     },
+    //     allocator,
+    //     query,
+    //     .{},
+    //     .{},
+    // );
+
+    const row2 = try stmt.oneAlloc(
+        struct {
+            id: usize,
+            title: []const u8,
+            genre: []const u8,
+        },
+        allocator,
+        .{},
+        .{},
+    );
+
+    if (row2) |row2_value| {
+        std.log.info("row2_value.id: {any}", .{row2_value.id});
+        std.log.info("row2_value.title: {s}", .{row2_value.title});
+        std.log.info("row2_value.genre: {s}", .{row2_value.genre});
+    }
+
+    var iter_stmt = try db.prepare(query);
+    defer iter_stmt.deinit();
+
+    var iter = try iter_stmt.iteratorAlloc(
+        struct {
+            id: usize,
+            title: []const u8,
+            genre: []const u8,
+        },
+        allocator,
+        .{},
+    );
+
+    while (true) {
+        // var arena = std.heap.ArenaAllocator.init(allocator);
+        // defer arena.deinit();
+
+        // const iter_value = try iter.nextAlloc(arena.allocator(), .{}) orelse break;
+        const iter_value = try iter.nextAlloc(allocator, .{}) orelse break;
+        std.log.info("iter_value.id: {any}", .{iter_value.id});
+        std.log.info("iter_value.title: {s}", .{iter_value.title});
+        std.log.info("iter_value.genre: {s}", .{iter_value.genre});
+    }
 
     // const Anime = struct {
     //     id: usize,
@@ -179,8 +285,7 @@ fn executeSQLiteScripts(db: *sqlite.Db) !void {
     //     genre: []const u8,
     //     episode_count: u32
     // };
-    // _ = Anime;
-    //
+
     // const selectScript =
     //     \\ SELECT
     //     \\ id
