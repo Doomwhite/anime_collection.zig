@@ -13,21 +13,21 @@ var selected_index: usize = 0;
 
 pub fn main() !void {
     settings.init_globals();
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) @panic("found memory leaks");
-    const allocator: Allocator = gpa.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer if (gpa.deinit() == .leak) @panic("found memory leaks");
+    // const allocator: Allocator = gpa.allocator();
 
-    var db = try sqlite.Db.init(.{
-        .mode = sqlite.Db.Mode{ .File = "/database.db" },
-        .open_flags = .{
-            .write = true,
-            .create = true,
-        },
-        .threading_mode = .MultiThread,
-    });
-    defer db.deinit();
-
-    try executeSQLiteScripts(&db, allocator);
+    // var db = try sqlite.Db.init(.{
+    //     .mode = sqlite.Db.Mode{ .File = "/database.db" },
+    //     .open_flags = .{
+    //         .write = true,
+    //         .create = true,
+    //     },
+    //     .threading_mode = .MultiThread,
+    // });
+    // defer db.deinit();
+    //
+    // try executeSQLiteScripts(&db, allocator);
 
     defer raylib.CloseWindow();
 
@@ -36,7 +36,7 @@ pub fn main() !void {
     std.log.info("iconImage: {any}", .{iconImage});
 
     raylib.SetConfigFlags(raylib.ConfigFlags{ .FLAG_WINDOW_RESIZABLE = true });
-    raylib.InitWindow(1600, 900, "Anime collection.zig");
+    raylib.InitWindow(600, 600, "Anime collection.zig");
     raylib.SetWindowIcon(iconImage);
     raylib.SetTargetFPS(144);
 
@@ -44,8 +44,11 @@ pub fn main() !void {
         raylib.BeginDrawing();
         defer raylib.EndDrawing();
 
-        raylib.ClearBackground(settings.colors[0].background());
+        raylib.ClearBackground(settings.colors[settings.selected_theme_index].background());
         raylib.DrawFPS(10, 10);
+        if (raylib.IsMouseButtonPressed(raylib.MouseButton.MOUSE_BUTTON_RIGHT)) {
+            settings.changeTheme();
+        }
         renderSidebarMenu();
 
         // raylib.DrawText("hello world!", 100, 100, 20, raylib.YELLOW);
@@ -60,9 +63,6 @@ fn renderSidebarMenu() void {
         // Determine the text color based on whether the item is selected or hovered
         var text_color: raylib.Color = undefined;
 
-        if (raylib.IsMouseButtonPressed(raylib.MouseButton.MOUSE_BUTTON_RIGHT)) {
-            settings.is_dark_mode = !settings.is_dark_mode;
-        }
         // Check if the mouse cursor is over the menu item
         if (raylib.CheckCollisionPointRec(raylib.GetMousePosition(), raylib.Rectangle{
             .x = 0,
@@ -70,7 +70,7 @@ fn renderSidebarMenu() void {
             .width = menu_width,
             .height = 20,
         })) {
-            text_color = settings.colors[0].hover(); // Change the text color when hovered
+            text_color = settings.colors[settings.selected_theme_index].hover(); // Change the text color when hovered
 
             // Check if the left mouse button was clicked
             if (raylib.IsMouseButtonPressed(raylib.MouseButton.MOUSE_BUTTON_LEFT)) {
@@ -81,9 +81,9 @@ fn renderSidebarMenu() void {
                 selected_index = menu_index;
             }
         } else if (selected_index == menu_index) {
-            text_color = settings.colors[0].selected(); // Change the text color when selected
+            text_color = settings.colors[settings.selected_theme_index].selected(); // Change the text color when selected
         } else {
-            text_color = settings.colors[0].text(); // Default text color
+            text_color = settings.colors[settings.selected_theme_index].text(); // Default text color
         }
 
         // Draw the menu item text
