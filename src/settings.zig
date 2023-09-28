@@ -1,5 +1,6 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
+const Allocator = std.mem.Allocator;
 
 const raylib = @import("raylib");
 const Image = raylib.Image;
@@ -43,9 +44,10 @@ pub const ColorTheme = struct {
 
 // Define a struct to represent menu items
 pub const MenuItem = struct {
+    parent: ?*MenuItem, // Indicates whether the item is currently selected
     title: [*:0]const u8, // The text to display for the menu item
     selected: bool, // Indicates whether the item is currently selected
-    items: ArrayList(MenuItem), // Indicates whether the item is currently selected
+    items: ?ArrayList(MenuItem), // Indicates whether the item is currently selected
 };
 
 pub var colors: [3]ColorTheme = undefined;
@@ -53,15 +55,27 @@ pub var colors: [3]ColorTheme = undefined;
 // Create an array of menu items
 pub var menu_items: [3]MenuItem = undefined;
 
+pub var current_menu: []const MenuItem = undefined;
+
 // pub var is_dark_mode: bool = true;
 pub const menu_width = 200; // Width of the sidebar menu
 
-pub fn init_globals() void {
+pub fn init_globals(allocator: Allocator) !void {
+    var teste_2 = MenuItem{ .parent = null, .title = "Settings", .selected = false, .items = undefined };
+    var teste = MenuItem{ .parent = &teste_2, .title = "Change theme", .selected = false, .items = null };
+    var settings_items = ArrayList(MenuItem).init(allocator);
+    defer settings_items.deinit();
+    try settings_items.append(teste);
+    teste_2.items = settings_items;
     menu_items = [3]MenuItem{
-        MenuItem{ .title = "Browse Anime", .selected = false },
-        MenuItem{ .title = "Browse Manga", .selected = false },
-        MenuItem{ .title = "Settings", .selected = false },
+        MenuItem{ .parent = null, .title = "Browse Anime", .selected = false, .items = null },
+        MenuItem{ .parent = null, .title = "Browse Manga", .selected = false, .items = null },
+        teste_2,
     };
+    // current_menu = ArrayList(MenuItem).init(allocator);
+    // try current_menu.appendSlice(&menu_items);
+    current_menu = &menu_items;
+
     colors = [_]ColorTheme{
         ColorTheme{
             .title = "Light theme",

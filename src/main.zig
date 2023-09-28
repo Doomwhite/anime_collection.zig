@@ -10,12 +10,14 @@ const menu_width = settings.menu_width;
 const MenuItem = settings.MenuItem;
 
 var selected_index: usize = 0;
+var haha: ?[]const MenuItem = null;
 
 pub fn main() !void {
-    settings.init_globals();
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) @panic("found memory leaks");
-    // const allocator: Allocator = gpa.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) @panic("found memory leaks");
+    const allocator: Allocator = gpa.allocator();
+    try settings.init_globals(allocator);
+    // defer settings.current_menu.deinit();
 
     // var db = try sqlite.Db.init(.{
     //     .mode = sqlite.Db.Mode{ .File = "/database.db" },
@@ -41,6 +43,9 @@ pub fn main() !void {
     raylib.SetTargetFPS(144);
 
     while (!raylib.WindowShouldClose()) {
+        if (haha) |hihi| {
+            settings.current_menu = hihi;
+        }
         raylib.BeginDrawing();
         defer raylib.EndDrawing();
 
@@ -59,7 +64,7 @@ fn renderSidebarMenu() void {
     // Calculate the position for the menu items
     var menu_item_y: i32 = 100;
 
-    for (settings.menu_items, 0..) |item, menu_index| {
+    for (settings.current_menu, 0..) |item, menu_index| {
         // Determine the text color based on whether the item is selected or hovered
         var text_color: raylib.Color = undefined;
 
@@ -79,6 +84,11 @@ fn renderSidebarMenu() void {
                 // For example:
                 std.log.info("Clicked on menu item {d}", .{menu_index});
                 selected_index = menu_index;
+                std.log.info("item: {any}", .{item});
+                if (item.items) |item_children| {
+                    // settings.current_menu = item_children.items;
+                    haha = item_children.items;
+                }
             }
         } else if (selected_index == menu_index) {
             text_color = settings.colors[settings.selected_theme_index].selected(); // Change the text color when selected
