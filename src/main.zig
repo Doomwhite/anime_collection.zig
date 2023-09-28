@@ -13,10 +13,11 @@ var selected_index: usize = 0;
 var haha: ?[]const MenuItem = null;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) @panic("found memory leaks");
-    const allocator: Allocator = gpa.allocator();
-    try settings.init_globals(allocator);
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer if (gpa.deinit() == .leak) @panic("found memory leaks");
+    // const allocator: Allocator = gpa.allocator();
+
+    try settings.init_globals();
     // defer settings.current_menu.deinit();
 
     // var db = try sqlite.Db.init(.{
@@ -87,7 +88,7 @@ fn renderSidebarMenu() void {
                 std.log.info("item: {any}", .{item});
                 if (item.items) |item_children| {
                     // settings.current_menu = item_children.items;
-                    haha = item_children.items;
+                    haha = item_children;
                 }
             }
         } else if (selected_index == menu_index) {

@@ -47,7 +47,7 @@ pub const MenuItem = struct {
     parent: ?*MenuItem, // Indicates whether the item is currently selected
     title: [*:0]const u8, // The text to display for the menu item
     selected: bool, // Indicates whether the item is currently selected
-    items: ?ArrayList(MenuItem), // Indicates whether the item is currently selected
+    items: ?[]const MenuItem, // Indicates whether the item is currently selected
 };
 
 pub var colors: [3]ColorTheme = undefined;
@@ -60,17 +60,14 @@ pub var current_menu: []const MenuItem = undefined;
 // pub var is_dark_mode: bool = true;
 pub const menu_width = 200; // Width of the sidebar menu
 
-pub fn init_globals(allocator: Allocator) !void {
-    var teste_2 = MenuItem{ .parent = null, .title = "Settings", .selected = false, .items = undefined };
-    var teste = MenuItem{ .parent = &teste_2, .title = "Change theme", .selected = false, .items = null };
-    var settings_items = ArrayList(MenuItem).init(allocator);
-    defer settings_items.deinit();
-    try settings_items.append(teste);
-    teste_2.items = settings_items;
+pub fn init_globals() !void {
+    var settings_menu_item = MenuItem{ .parent = null, .title = "Settings", .selected = false, .items = undefined };
+    var teste = MenuItem{ .parent = &settings_menu_item, .title = "Change theme", .selected = false, .items = null };
+    settings_menu_item.items = &[1]MenuItem{teste};
     menu_items = [3]MenuItem{
         MenuItem{ .parent = null, .title = "Browse Anime", .selected = false, .items = null },
         MenuItem{ .parent = null, .title = "Browse Manga", .selected = false, .items = null },
-        teste_2,
+        settings_menu_item,
     };
     // current_menu = ArrayList(MenuItem).init(allocator);
     // try current_menu.appendSlice(&menu_items);
