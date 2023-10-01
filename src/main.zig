@@ -12,7 +12,6 @@ const MenuItemType = settings.MenuItemType;
 
 const db = @import("db.zig");
 
-var selected_index: usize = 0;
 var haha: ?[]const MenuItem = null;
 
 pub fn main() !void {
@@ -42,9 +41,11 @@ pub fn main() !void {
     std.log.info("iconImage: {any}", .{iconImage});
 
     raylib.SetConfigFlags(raylib.ConfigFlags{ .FLAG_WINDOW_RESIZABLE = true });
-    raylib.InitWindow(600, 600, "Anime collection.zig");
+    raylib.InitWindow(1440, 600, "Anime collection.zig");
     raylib.SetWindowIcon(iconImage);
     raylib.SetTargetFPS(144);
+
+    // var sailor_image = settings.loadMenuImage("sailor.png");
 
     while (!raylib.WindowShouldClose()) {
         raylib.BeginDrawing();
@@ -52,25 +53,35 @@ pub fn main() !void {
 
         raylib.ClearBackground(settings.colors[settings.selected_theme_index].background());
         raylib.DrawFPS(10, 10);
+
+        const screenHeight: i32 = raylib.GetScreenHeight();
+        const menuSpacing: f32 = @as(f32, @floatFromInt(screenHeight)) * settings.menu_item_spacing_percent;
+
+        var menu_item_y: f32 = menuSpacing;
+
         if (raylib.IsMouseButtonPressed(raylib.MouseButton.MOUSE_BUTTON_RIGHT)) {
             // var current_menu = settings.current_menu;
             // settings.current_menu = settings.previous_menu;
             // settings.previous_menu = current_menu;
         }
         // renderSidebarMenu();
-        var menu_item_y: i32 = 100;
+        // var menu_item_y: i32 = 100;
 
-        for (settings.current_menu, 0..) |item, menu_index| {
+        // if (sailor_image) |image| {
+        //     raylib.DrawTexture(image, 10, @intFromFloat(menu_item_y), raylib.WHITE);
+        // }
+
+        for (settings.current_menu) |item| {
             // Determine the text color based on whether the item is selected or hovered
             var text_color: raylib.Color = undefined;
-
             // std.log.info("menu_item_y: {any}", .{menu_item_y});
             // Check if the mouse cursor is over the menu item
             if (cursorInColission(menu_item_y)) {
                 text_color = settings.colors[settings.selected_theme_index].hover(); // Change the text color when hovered
                 if (raylib.IsMouseButtonPressed(raylib.MouseButton.MOUSE_BUTTON_LEFT)) {
                     switch (item.type) {
-                        .Nothing => {},
+                        .BrowserAnime => {},
+                        .BrowserManga => {},
                         .Settings => {
                             if (item.items) |children_items| {
                                 settings.previous_menu = settings.current_menu;
@@ -78,7 +89,7 @@ pub fn main() !void {
                                 break;
                             }
                         },
-                        .ChangeTheme => {
+                        .SettingsChangeTheme => {
                             settings.changeTheme();
                         },
                         .Return => {
@@ -88,20 +99,17 @@ pub fn main() !void {
                             break;
                         },
                     }
-                    selected_index = menu_index;
                     // if (item.items) |item_children| {
                     //     // settings.current_menu = item_children.items;
                     //     haha = item_children;
                     // }
                 }
-            } else if (selected_index == menu_index) {
-                text_color = settings.colors[settings.selected_theme_index].selected(); // Change the text color when selected
             } else {
                 text_color = settings.colors[settings.selected_theme_index].text(); // Default text color
             }
 
             // Draw the menu item text
-            raylib.DrawText(item.title, 10, menu_item_y, 20, text_color);
+            raylib.DrawText(item.title, 10, @intFromFloat(menu_item_y), 20, text_color);
 
             // Increase the Y position for the next menu item
             menu_item_y += settings.menu_item_height;
@@ -111,10 +119,10 @@ pub fn main() !void {
     }
 }
 
-fn cursorInColission(menu_item_y: i32) bool {
+fn cursorInColission(menu_item_y: f32) bool {
     return raylib.CheckCollisionPointRec(raylib.GetMousePosition(), raylib.Rectangle{
         .x = 0,
-        .y = @floatFromInt(menu_item_y),
+        .y = menu_item_y,
         .width = menu_width,
         .height = 20,
     });
